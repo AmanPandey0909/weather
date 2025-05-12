@@ -16,7 +16,7 @@ export function DailyForecast({ dailyData }: DailyForecastProps) {
    if (!dailyData || dailyData.length === 0) {
     return (
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">6+ Days Forecast</h2>
+        <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">7 Days Forecast</h2>
         <p className="text-muted-foreground">No daily forecast data available.</p>
       </div>
     );
@@ -24,7 +24,7 @@ export function DailyForecast({ dailyData }: DailyForecastProps) {
 
   return (
     <div>
-      <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">6+ Days Forecast</h2>
+      <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">7 Days Forecast</h2>
       <ScrollArea className="w-full whitespace-nowrap">
         <div className="flex space-x-2 sm:space-x-3 pb-4">
           {dailyData.map((data, index) => {
@@ -49,3 +49,4 @@ export function DailyForecast({ dailyData }: DailyForecastProps) {
     </div>
   );
 }
+
