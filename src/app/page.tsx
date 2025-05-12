@@ -1,3 +1,4 @@
+
 // src/app/page.tsx
 "use client";
 
@@ -7,39 +8,80 @@ import { WeatherHeader } from '@/components/weather/weather-header';
 import { CurrentWeather } from '@/components/weather/current-weather';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
 import { DailyForecast } from '@/components/weather/daily-forecast';
-import { CloudFog, Cloud, MapPin } from 'lucide-react'; // CloudFog for main current condition, Cloud for default general
+import { getWeatherForecast } from '@/ai/flows/get-weather-forecast-flow';
+import type { GetWeatherForecastOutput, GetWeatherForecastInput } from '@/ai/schemas/weather-forecast-schemas';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
+import { format, subDays, addDays, isFuture, isPast } from 'date-fns';
 
 export default function WeatherPage() {
   const [currentTime, setCurrentTime] = useState("");
-  const [currentDate, setCurrentDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [location, setLocation] = useState<string>("New York, US"); // Default location
+  const [weatherData, setWeatherData] = useState<GetWeatherForecastOutput | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
-      setCurrentDate(now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }));
+    const updateCurrentTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
     };
-    updateDateTime();
-    const intervalId = setInterval(updateDateTime, 60000); // Update every minute
+    updateCurrentTime();
+    const intervalId = setInterval(updateCurrentTime, 60000); // Update every minute
     return () => clearInterval(intervalId);
   }, []);
 
-  const weatherData = {
-    location: "Los Angeles, US",
-    temperature: "16.5",
-    condition: "Fog",
-    WeatherIcon: CloudFog, // Specific icon for current condition
-    maxTemp: "33.2", // From image, seems high for LA fog, but matching image
-    minTemp: "16",   // From image
-    windSpeed: "2.8",
-    windDirection: "NW",
-    sunriseTime: "05:52 AM",
-    sunsetTime: "08:05 PM",
-    humidity: "95", // From hourly forecast for 05:00 AM
-    uvIndex: "0 of 11" // From hourly forecast for 05:00 AM
+  const fetchWeatherData = async (currentLocation: string, date: Date) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const input: GetWeatherForecastInput = {
+        location: currentLocation,
+        date: format(date, "yyyy-MM-dd"),
+      };
+      const data = await getWeatherForecast(input);
+      setWeatherData(data);
+    } catch (e) {
+      console.error("Failed to fetch weather data:", e);
+      setError("Failed to load weather data. Please try again.");
+      setWeatherData(null); // Clear old data on error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeatherData(location, selectedDate);
+  }, [location, selectedDate]);
+
+  const handleLocationSearch = (newLocation: string) => {
+    setLocation(newLocation);
+  };
+
+  const handleDateChange = (newDate: Date) => {
+    // Prevent selecting dates too far in the future or past if necessary
+    // This logic is already in the Calendar component's disabled prop,
+    // but good to have a safeguard here if direct date manipulation was possible.
+    setSelectedDate(newDate);
+  };
+
+  const handlePreviousDay = () => {
+    const newDate = subDays(selectedDate, 1);
+    // Add any hard limits if needed, e.g., not before 5 years ago
+    if (!isPast(addDays(newDate, - (365*5)))) { // Example: Check if newDate is not more than 5 years ago
+       setSelectedDate(newDate);
+    }
+  };
+
+  const handleNextDay = () => {
+    const newDate = addDays(selectedDate, 1);
+    // Add any hard limits if needed, e.g., not more than 30 days in future
+    if (!isFuture(subDays(newDate, 31))) { // Example: Check if newDate is not more than 30 days ahead
+        setSelectedDate(newDate);
+    }
   };
   
-  // Placeholder background image. Replace with a more thematic one if available.
   const backgroundImageUrl = "https://picsum.photos/seed/weather/1920/1080";
 
   return (
@@ -52,28 +94,45 @@ export default function WeatherPage() {
       
       <main className="relative z-10 p-4 sm:p-6 md:p-8 max-w-screen-xl mx-auto">
         <WeatherHeader 
-          location={weatherData.location}
-          date={currentDate || "Friday, 14 July"} // Fallback to image date
-          currentTime={currentTime || "05:05 AM"} // Fallback to image time
+          currentLocation={weatherData?.locationName || location}
+          onSearchLocation={handleLocationSearch}
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          onPreviousDay={handlePreviousDay}
+          onNextDay={handleNextDay}
+          currentTime={currentTime || "Loading..."}
+          displayDate={weatherData?.displayDate || format(selectedDate, "EEEE, MMMM d")}
         />
-        <CurrentWeather 
-          temperature={weatherData.temperature}
-          condition={weatherData.condition}
-          WeatherIcon={weatherData.WeatherIcon}
-          maxTemp={weatherData.maxTemp}
-          minTemp={weatherData.minTemp}
-          windSpeed={weatherData.windSpeed}
-          windDirection={weatherData.windDirection}
-          sunriseTime={weatherData.sunriseTime}
-          sunsetTime={weatherData.sunsetTime}
-          humidity={weatherData.humidity}
-          uvIndex={weatherData.uvIndex}
-        />
-        <HourlyForecast />
-        <DailyForecast />
+
+        {isLoading && (
+          <div className="space-y-6 md:space-y-8">
+            <Skeleton className="h-[200px] w-full rounded-lg" />
+            <Skeleton className="h-[250px] w-full rounded-lg" />
+            <Skeleton className="h-[200px] w-full rounded-lg" />
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <Alert variant="destructive" className="bg-card/50 backdrop-blur-md">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {!isLoading && !error && weatherData && (
+          <>
+            <CurrentWeather 
+              currentWeather={weatherData.current}
+              locationName={weatherData.locationName}
+            />
+            <HourlyForecast hourlyData={weatherData.hourly} />
+            <DailyForecast dailyData={weatherData.daily} />
+          </>
+        )}
       </main>
       <footer className="relative z-10 text-center p-4 text-xs text-muted-foreground">
-        Weather data is illustrative. UI concept.
+        Weather data is illustrative and may be generated by AI. UI concept.
       </footer>
     </div>
   );

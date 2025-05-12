@@ -2,44 +2,105 @@
 "use client";
 
 import type * as React from 'react';
-import { MapPin, CalendarDays, Clock, Search } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, CalendarDays, Clock, Search, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from 'date-fns';
 
 interface WeatherHeaderProps {
-  location: string;
-  date: string;
+  currentLocation: string;
+  onSearchLocation: (location: string) => void;
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  onPreviousDay: () => void;
+  onNextDay: () => void;
   currentTime: string;
+  displayDate: string;
 }
 
-export function WeatherHeader({ location, date, currentTime }: WeatherHeaderProps) {
+export function WeatherHeader({ 
+  currentLocation, 
+  onSearchLocation, 
+  selectedDate, 
+  onDateChange,
+  onPreviousDay,
+  onNextDay,
+  currentTime,
+  displayDate
+}: WeatherHeaderProps) {
+  const [searchInput, setSearchInput] = useState(currentLocation);
+
+  const handleSearch = (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
+    if (searchInput.trim()) {
+      onSearchLocation(searchInput.trim());
+    }
+  };
+
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
-      <div className="flex flex-col items-center sm:items-start">
+    <div className="flex flex-col md:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
+      {/* Left Side: Location and Date */}
+      <div className="flex flex-col items-center md:items-start">
         <div className="flex items-center text-xl sm:text-2xl font-semibold text-foreground mb-1">
           <MapPin className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary" />
-          <span>{location}</span>
+          <span>{currentLocation}</span>
         </div>
         <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
           <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 text-primary/80" />
-          <span>{date}</span>
+          <span>{displayDate}</span>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full sm:w-auto">
-        <div className="relative w-full sm:w-64 md:w-72">
+      {/* Right Side: Search, Date Nav, Time */}
+      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full md:w-auto">
+        <form onSubmit={handleSearch} className="relative w-full sm:w-auto md:w-56">
           <Input
             type="text"
-            placeholder="Search City or ZIP Code"
+            placeholder="Search City or ZIP"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="bg-card/50 border-border/70 placeholder-muted-foreground text-sm pr-10"
             aria-label="Search City or ZIP Code"
           />
-          <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-primary">
+          <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-primary">
              <Search className="h-4 w-4" />
           </Button>
+        </form>
+        
+        <div className="flex items-center gap-1 bg-card/30 backdrop-blur-sm px-2 py-1.5 rounded-md">
+          <Button variant="ghost" size="icon" onClick={onPreviousDay} className="h-7 w-7">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className="h-7 w-auto px-2 text-xs bg-transparent hover:bg-accent/50 border-primary/30"
+              >
+                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                {format(selectedDate, "MMM d")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-card border-border shadow-xl" align="center">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && onDateChange(date)}
+                initialFocus
+                disabled={(date) => date > addDays(new Date(), 30) || date < subDays(new Date(), 365*5)} // Example: 5 years past, 30 days future
+              />
+            </PopoverContent>
+          </Popover>
+          <Button variant="ghost" size="icon" onClick={onNextDay} className="h-7 w-7">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
-        <div className="flex items-center text-lg sm:text-xl font-medium text-foreground bg-card/30 backdrop-blur-sm px-3 py-1.5 rounded-md">
-          <Clock className="w-5 h-5 mr-2 text-primary/90" />
+
+        <div className="flex items-center text-base sm:text-lg font-medium text-foreground bg-card/30 backdrop-blur-sm px-3 py-1.5 rounded-md">
+          <Clock className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary/90" />
           <span>{currentTime}</span>
         </div>
       </div>
