@@ -40,7 +40,7 @@ const getWeatherForecastFlow = ai.defineFlow(
 
 const prompt = ai.definePrompt({
   name: 'weatherForecastPrompt',
-  model: 'googleai/gemini-1.5-flash-latest', // Added model here
+  model: 'googleai/gemini-1.5-flash-latest',
   input: { schema: GetWeatherForecastInputSchema },
   output: { schema: GetWeatherForecastOutputSchema },
   prompt: `You are a sophisticated weather API. Provide a detailed and realistic weather forecast for the location "{{location}}" on {{#if date}}the date "{{date}}"{{else}}today{{/if}}.
@@ -61,6 +61,7 @@ Key instructions for your response:
 - UV Index: Provide realistic UV index values appropriate for the time of day/year and location.
 - Wind: Provide wind speed in km/h and a standard wind direction (e.g., N, NE, SW).
 - Humidity & Rain Chance: Provide realistic percentages (0-100).
+- Coordinates: If the provided '{{location}}' is specific enough to have coordinates (e.g., a city name), please also include the 'latitude' and 'longitude' in your response. If the location is too vague (e.g., "a beach"), these fields can be omitted or set to null.
 
 Generate a complete and valid JSON object according to the schema.
 `,
@@ -70,4 +71,3 @@ Generate a complete and valid JSON object according to the schema.
 export async function getWeatherForecast(input: GetWeatherForecastInput): Promise<GetWeatherForecastOutput> {
   return getWeatherForecastFlow(input);
 }
-

@@ -49,6 +49,7 @@ export const GetWeatherForecastOutputSchema = z.object({
   current: CurrentWeatherSchema,
   hourly: z.array(HourlyForecastItemSchema).describe("24 hourly forecasts for the selected date"),
   daily: z.array(DailyForecastItemSchema).length(7).describe("7-day forecast starting from the selected date"),
+  latitude: z.number().optional().describe("Approximate latitude of the location, if determinable."),
+  longitude: z.number().optional().describe("Approximate longitude of the location, if determinable."),
 });
 export type GetWeatherForecastOutput = z.infer<typeof GetWeatherForecastOutputSchema>;
-

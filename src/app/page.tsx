@@ -8,6 +8,7 @@ import { WeatherHeader } from '@/components/weather/weather-header';
 import { CurrentWeather } from '@/components/weather/current-weather';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
 import { DailyForecast } from '@/components/weather/daily-forecast';
+import { LocationMap } from '@/components/weather/location-map'; // Added
 import { getWeatherForecast } from '@/ai/flows/get-weather-forecast-flow';
 import type { GetWeatherForecastOutput, GetWeatherForecastInput } from '@/ai/schemas/weather-forecast-schemas';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -96,17 +97,21 @@ export default function WeatherPage() {
     }
   };
   
-  const backgroundImageUrl = "https://picsum.photos/seed/weather/1920/1080";
+  const backgroundImageUrl = "https://picsum.photos/seed/sky/1920/1080"; // Changed seed for variety
 
   return (
     <div 
-      className="bg-cover bg-center min-h-screen text-foreground relative font-sans selection:bg-primary/70 selection:text-primary-foreground"
-      style={{ backgroundImage: `url(${backgroundImageUrl})` }}
-      data-ai-hint="cloudy sky"
+      className="bg-center min-h-screen text-foreground relative font-sans selection:bg-primary/70 selection:text-primary-foreground animate-bg-pan"
+      style={{ 
+        backgroundImage: `url(${backgroundImageUrl})`,
+        backgroundSize: '150% auto', // Allow image to pan
+        backgroundRepeat: 'no-repeat',
+      }}
+      data-ai-hint="cloudy sky landscape"
     >
       <div className="absolute inset-0 bg-background/70 backdrop-blur-sm"></div> {/* Overlay */}
       
-      <main className="relative z-10 p-4 sm:p-6 md:p-8 max-w-screen-xl mx-auto">
+      <main className="relative z-10 p-4 sm:p-6 md:p-8 max-w-screen-xl mx-auto space-y-6 md:space-y-8">
         <WeatherHeader 
           currentLocation={weatherData?.locationName || location}
           onSearchLocation={handleLocationSearch}
@@ -124,6 +129,7 @@ export default function WeatherPage() {
             <Skeleton className="h-[200px] w-full rounded-lg" />
             <Skeleton className="h-[250px] w-full rounded-lg" />
             <Skeleton className="h-[200px] w-full rounded-lg" />
+            <Skeleton className="h-[200px] w-full rounded-lg" /> {/* Skeleton for map */}
           </div>
         )}
 
@@ -143,7 +149,19 @@ export default function WeatherPage() {
             />
             <HourlyForecast hourlyData={weatherData.hourly} />
             <DailyForecast dailyData={weatherData.daily} />
+            <LocationMap 
+              latitude={weatherData.latitude}
+              longitude={weatherData.longitude}
+              locationName={weatherData.locationName}
+            />
           </>
+        )}
+         {!isLoading && !error && !weatherData && !isLoading && ( // Case where no data but no error (e.g. initial load fail before first data)
+          <Alert variant="default" className="bg-card/50 backdrop-blur-md">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>No Weather Data</AlertTitle>
+            <AlertDescription>Could not load weather information. Please try searching for a location or refreshing.</AlertDescription>
+          </Alert>
         )}
       </main>
       <footer className="relative z-10 text-center p-4 text-xs text-muted-foreground">
@@ -152,4 +170,3 @@ export default function WeatherPage() {
     </div>
   );
 }
-
