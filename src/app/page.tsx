@@ -9,6 +9,7 @@ import { CurrentWeather } from '@/components/weather/current-weather';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
 import { DailyForecast } from '@/components/weather/daily-forecast';
 import { LocationMap } from '@/components/weather/location-map';
+import { TemperatureVariationChart } from '@/components/weather/temperature-variation-chart';
 import { getWeatherForecast } from '@/ai/flows/get-weather-forecast-flow';
 import type { GetWeatherForecastOutput, GetWeatherForecastInput } from '@/ai/schemas/weather-forecast-schemas';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,7 +19,7 @@ import { format, subDays, addDays, isBefore, isAfter, startOfDay } from 'date-fn
 
 export default function WeatherPage() {
   const [currentTime, setCurrentTime] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [location, setLocation] = useState<string>("New York, US"); // Default location
   const [weatherData, setWeatherData] = useState<GetWeatherForecastOutput | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -130,6 +131,7 @@ export default function WeatherPage() {
             <Skeleton className="h-[250px] w-full rounded-lg" />
             <Skeleton className="h-[200px] w-full rounded-lg" />
             <Skeleton className="h-[350px] w-full rounded-lg" /> 
+            <Skeleton className="h-[350px] w-full rounded-lg" /> 
           </div>
         )}
 
@@ -153,6 +155,7 @@ export default function WeatherPage() {
               selectedDate={selectedDate}
               onDateSelect={handleDateChange}
             />
+            <TemperatureVariationChart dailyData={weatherData.daily} />
             <LocationMap 
               latitude={weatherData.latitude}
               longitude={weatherData.longitude}
@@ -174,3 +177,4 @@ export default function WeatherPage() {
     </div>
   );
 }
+
