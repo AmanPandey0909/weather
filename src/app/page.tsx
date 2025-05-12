@@ -10,13 +10,13 @@ import { HourlyForecast } from '@/components/weather/hourly-forecast';
 import { DailyForecast } from '@/components/weather/daily-forecast';
 import { LocationMap } from '@/components/weather/location-map';
 import { TemperatureVariationChart } from '@/components/weather/temperature-variation-chart';
-import { getWeatherForecast } from '@/ai/flows/get-weather-forecast-flow';
+// Import types, but not the flow function itself
 import type { GetWeatherForecastOutput, GetWeatherForecastInput } from '@/ai/schemas/weather-forecast-schemas';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { format, subDays, addDays, isBefore, isAfter, startOfDay } from 'date-fns';
-import { getThemeForWeather, updateRootCSSVariables, type WeatherStyle } from '@/lib/theme-utils';
+import { getThemeForWeather, updateRootCSSVariables } from '@/lib/theme-utils';
 
 export default function WeatherPage() {
   const [currentTime, setCurrentTime] = useState("");
@@ -58,38 +58,47 @@ export default function WeatherPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const input: GetWeatherForecastInput = {
-        location: currentLocation,
-        date: format(date, "yyyy-MM-dd"),
-      };
-      const data = await getWeatherForecast(input);
+      const formattedDate = format(date, "yyyy-MM-dd");
+      const response = await fetch(`/api/weather?location=${encodeURIComponent(currentLocation)}&date=${formattedDate}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `API request failed with status ${response.status}` }));
+        throw new Error(errorData.message || `API request failed with status ${response.status}`);
+      }
+      
+      const data: GetWeatherForecastOutput = await response.json();
       setWeatherData(data);
+
       if (data?.current?.condition?.text) {
         applyWeatherStyling(data.current.condition.text);
       } else {
-        applyWeatherStyling(); // Apply default theme if no specific condition
+        applyWeatherStyling(); 
       }
     } catch (e) {
       console.error("Failed to fetch weather data:", e);
-      let errorMessage = "An unexpected error occurred while fetching weather data. Please try again later."; // Default generic error
-      if (e instanceof Error && e.message) {
-        const lowerCaseMessage = e.message.toLowerCase();
-        if (lowerCaseMessage.includes("api key") || 
-            lowerCaseMessage.includes("gemini_api_key") || 
-            lowerCaseMessage.includes("google_api_key") ||
-            lowerCaseMessage.includes("failed_precondition") ||
-            lowerCaseMessage.includes("authentication failed") ||
-            lowerCaseMessage.includes("permission denied") ||
-            lowerCaseMessage.includes("invalid api key")) { // More general check for invalid api key
-          errorMessage = "API Key or Permission Error. Please check your API key configuration in the .env file and ensure it has the necessary permissions.";
-        } else {
-          // For other errors, show a generic message.
-          errorMessage = `Failed to load weather data. Please check your connection and try again.`;
-        }
+      let errorMessage = "An unexpected error occurred while fetching weather data. Please try again later.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
       }
+      
+      // More specific error message for API key issues (which would now be on the ASP.NET backend side)
+      // This check might be less accurate now, as the frontend doesn't directly deal with Genkit/Gemini keys.
+      // However, if the backend proxies an API key error, this could still be useful.
+      if (errorMessage.toLowerCase().includes("api key") || 
+          errorMessage.toLowerCase().includes("gemini_api_key") || 
+          errorMessage.toLowerCase().includes("google_api_key") ||
+          errorMessage.toLowerCase().includes("failed_precondition") ||
+          errorMessage.toLowerCase().includes("authentication failed") ||
+          errorMessage.toLowerCase().includes("permission denied") ||
+          errorMessage.toLowerCase().includes("invalid api key")) { 
+        errorMessage = "There was an issue with the backend weather service. Please check service configuration (e.g. API keys).";
+      } else {
+        errorMessage = `Failed to load weather data: ${errorMessage}. Please check your connection and try again.`;
+      }
+
       setError(errorMessage);
-      setWeatherData(null); // Clear old data on error
-      applyWeatherStyling(); // Apply default theme on error
+      setWeatherData(null); 
+      applyWeatherStyling(); 
     } finally {
       setIsLoading(false);
     }
@@ -97,12 +106,11 @@ export default function WeatherPage() {
 
   useEffect(() => {
     fetchWeatherData(location, selectedDate);
-  }, [location, selectedDate, applyWeatherStyling]); // Added applyWeatherStyling to dependencies as it's used in error case
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, selectedDate, applyWeatherStyling]); 
 
-  // Apply default theme on initial mount
   useEffect(() => {
-    // Initial styling application
-    if (!weatherData && !isLoading && !error) { // Only apply default if no data, not loading, and no error
+    if (!weatherData && !isLoading && !error) { 
         applyWeatherStyling();
     }
   }, [applyWeatherStyling, weatherData, isLoading, error]);
@@ -149,7 +157,7 @@ export default function WeatherPage() {
         backgroundImage: `url(${dynamicBackgroundImageUrl})`,
         backgroundSize: 'cover', 
         backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed', // Keeps background fixed during scroll
+        backgroundAttachment: 'fixed', 
       }}
       data-ai-hint={dynamicAiHint}
     >
@@ -215,7 +223,7 @@ export default function WeatherPage() {
         )}
       </main>
       <footer className="relative z-10 text-center p-4 text-xs text-muted-foreground">
-        Weather data is illustrative and may be generated by AI. UI concept.
+        Weather data provided by external service. UI concept.
       </footer>
     </div>
   );
