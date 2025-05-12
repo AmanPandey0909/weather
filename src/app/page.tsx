@@ -8,13 +8,13 @@ import { WeatherHeader } from '@/components/weather/weather-header';
 import { CurrentWeather } from '@/components/weather/current-weather';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
 import { DailyForecast } from '@/components/weather/daily-forecast';
-import { LocationMap } from '@/components/weather/location-map'; // Added
+import { LocationMap } from '@/components/weather/location-map';
 import { getWeatherForecast } from '@/ai/flows/get-weather-forecast-flow';
 import type { GetWeatherForecastOutput, GetWeatherForecastInput } from '@/ai/schemas/weather-forecast-schemas';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { format, subDays, addDays, isBefore, isAfter } from 'date-fns';
+import { format, subDays, addDays, isBefore, isAfter, startOfDay } from 'date-fns';
 
 export default function WeatherPage() {
   const [currentTime, setCurrentTime] = useState("");
@@ -70,46 +70,46 @@ export default function WeatherPage() {
     const fiveYearsAgo = subDays(new Date(), 365 * 5);
     const thirtyDaysHence = addDays(new Date(), 30);
     // Normalize dates to midnight to compare calendar days correctly
-    const normalizedDateToTest = new Date(dateToTest.getFullYear(), dateToTest.getMonth(), dateToTest.getDate());
-    const normalizedFiveYearsAgo = new Date(fiveYearsAgo.getFullYear(), fiveYearsAgo.getMonth(), fiveYearsAgo.getDate());
-    const normalizedThirtyDaysHence = new Date(thirtyDaysHence.getFullYear(), thirtyDaysHence.getMonth(), thirtyDaysHence.getDate());
+    const normalizedDateToTest = startOfDay(dateToTest);
+    const normalizedFiveYearsAgo = startOfDay(fiveYearsAgo);
+    const normalizedThirtyDaysHence = startOfDay(thirtyDaysHence);
 
     return isAfter(normalizedDateToTest, normalizedThirtyDaysHence) || isBefore(normalizedDateToTest, normalizedFiveYearsAgo);
   };
 
-  const handleDateChange = (newDate: Date) => {
-    if (!isDateDisabled(newDate)) {
-      setSelectedDate(newDate);
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (newDate && !isDateDisabled(newDate)) {
+      setSelectedDate(startOfDay(newDate));
     }
   };
 
   const handlePreviousDay = () => {
     const newDate = subDays(selectedDate, 1);
     if (!isDateDisabled(newDate)) {
-       setSelectedDate(newDate);
+       setSelectedDate(startOfDay(newDate));
     }
   };
 
   const handleNextDay = () => {
     const newDate = addDays(selectedDate, 1);
     if (!isDateDisabled(newDate)) {
-        setSelectedDate(newDate);
+        setSelectedDate(startOfDay(newDate));
     }
   };
   
-  const backgroundImageUrl = "https://picsum.photos/seed/sky/1920/1080"; // Changed seed for variety
+  const backgroundImageUrl = "https://picsum.photos/seed/sky/1920/1080";
 
   return (
     <div 
       className="bg-center min-h-screen text-foreground relative font-sans selection:bg-primary/70 selection:text-primary-foreground animate-bg-pan"
       style={{ 
         backgroundImage: `url(${backgroundImageUrl})`,
-        backgroundSize: '150% auto', // Allow image to pan
+        backgroundSize: '150% auto', 
         backgroundRepeat: 'no-repeat',
       }}
       data-ai-hint="cloudy sky landscape"
     >
-      <div className="absolute inset-0 bg-background/70 backdrop-blur-sm"></div> {/* Overlay */}
+      <div className="absolute inset-0 bg-background/70 backdrop-blur-sm"></div> 
       
       <main className="relative z-10 p-4 sm:p-6 md:p-8 max-w-screen-xl mx-auto space-y-6 md:space-y-8">
         <WeatherHeader 
@@ -129,7 +129,7 @@ export default function WeatherPage() {
             <Skeleton className="h-[200px] w-full rounded-lg" />
             <Skeleton className="h-[250px] w-full rounded-lg" />
             <Skeleton className="h-[200px] w-full rounded-lg" />
-            <Skeleton className="h-[200px] w-full rounded-lg" /> {/* Skeleton for map */}
+            <Skeleton className="h-[350px] w-full rounded-lg" /> 
           </div>
         )}
 
@@ -148,7 +148,11 @@ export default function WeatherPage() {
               locationName={weatherData.locationName}
             />
             <HourlyForecast hourlyData={weatherData.hourly} />
-            <DailyForecast dailyData={weatherData.daily} />
+            <DailyForecast 
+              dailyData={weatherData.daily}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateChange}
+            />
             <LocationMap 
               latitude={weatherData.latitude}
               longitude={weatherData.longitude}
@@ -156,7 +160,7 @@ export default function WeatherPage() {
             />
           </>
         )}
-         {!isLoading && !error && !weatherData && !isLoading && ( // Case where no data but no error (e.g. initial load fail before first data)
+         {!isLoading && !error && !weatherData && ( 
           <Alert variant="default" className="bg-card/50 backdrop-blur-md">
             <Terminal className="h-4 w-4" />
             <AlertTitle>No Weather Data</AlertTitle>
