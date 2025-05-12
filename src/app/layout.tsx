@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'UI Mirror',
-  description: 'Input UI markup and see it rendered. Get AI-powered generation and analysis.',
+  title: 'UI Mirror Studio',
+  description: 'Visually design and refine UIs with AI-powered generation, real-time rendering, and code analysis.',
 };
 
 export default function RootLayout({

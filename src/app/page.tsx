@@ -9,48 +9,52 @@ import { generateMarkup } from '@/ai/flows/markup-generator';
 import type { GenerateMarkupInput, GenerateMarkupOutput } from '@/ai/flows/markup-generator';
 import { analyzeCodeQuality } from '@/ai/flows/code-quality-analyzer';
 import type { AnalyzeCodeQualityInput, AnalyzeCodeQualityOutput } from '@/ai/flows/code-quality-analyzer';
+import { Loader2 } from "lucide-react";
 
 const initialMarkup = `
 <style>
   body { 
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; 
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    height: 100vh; 
-    background-color: #E0E7FF; /* Light Lavender */
+    height: 100%; /* Fill iframe */
+    background-color: #f8f9fa; /* Light neutral gray */
     margin: 0; 
-    color: #374151; /* Cool Gray */
-    overflow: hidden; /* Prevents scrollbars from appearing from body margin */
+    color: #212529; /* Standard dark gray text */
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: auto; /* Allow scroll if content overflows */
   }
   .container { 
-    padding: 30px; 
-    background-color: white; 
-    border-radius: 12px; 
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-    text-align: center; 
-    max-width: 400px;
+    padding: 2rem; 
+    background-color: #ffffff; /* White background for container */
+    border-radius: 8px; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+    max-width: 450px;
+    width: 100%;
   }
   h1 { 
-    color: #008080; /* Teal */
-    font-size: 1.8rem;
-    margin-bottom: 0.5em;
+    color: #343a40; /* Darker gray for heading */
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
   }
   p { 
-    color: #4B5563; /* Darker Cool Gray */
+    color: #495057; /* Medium gray for paragraph */
     font-size: 1rem;
     line-height: 1.6;
   }
   .emoji {
-    font-size: 2rem;
+    font-size: 2.5rem;
     display: block;
-    margin-bottom: 0.5em;
+    margin-bottom: 1rem;
   }
 </style>
 <div class="container">
-  <span class="emoji">✨</span>
-  <h1>Welcome to UI Mirror!</h1>
-  <p>Enter a description or HTML/CSS code on the left to see your UI magically appear here.</p>
+  <span class="emoji">🖼️</span>
+  <h1>UI Mirror</h1>
+  <p>Describe your UI or paste HTML/CSS code on the left. Your creation will appear here!</p>
 </div>
 `;
 
@@ -132,8 +136,6 @@ export default function Home() {
   };
 
   if (!isMounted) {
-    // Optional: Show a loading spinner or skeleton screen until client-side hydration is complete
-    // This helps prevent layout shifts or issues with resizable panels before hydration
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -145,7 +147,7 @@ export default function Home() {
     <main className="h-screen w-screen overflow-hidden flex flex-col bg-background">
       <ResizablePanelGroup 
         direction="horizontal" 
-        className="flex-grow min-h-0" // flex-grow and min-h-0 are important for filling space
+        className="flex-grow min-h-0"
       >
         <ResizablePanel defaultSize={40} minSize={25} className="min-w-[300px]">
           <MarkupInputPanel
@@ -168,6 +170,3 @@ export default function Home() {
     </main>
   );
 }
-
-// Added Loader2 from lucide-react for the initial loading state
-import { Loader2 } from "lucide-react";
