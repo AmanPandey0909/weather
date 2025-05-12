@@ -3,7 +3,7 @@
 "use client";
 
 import type * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { WeatherHeader } from '@/components/weather/weather-header';
 import { CurrentWeather } from '@/components/weather/current-weather';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { format, subDays, addDays, isBefore, isAfter, startOfDay } from 'date-fns';
+import { getThemeForWeather, updateRootCSSVariables, type WeatherStyle } from '@/lib/theme-utils';
 
 export default function WeatherPage() {
   const [currentTime, setCurrentTime] = useState("");
@@ -24,6 +25,9 @@ export default function WeatherPage() {
   const [weatherData, setWeatherData] = useState<GetWeatherForecastOutput | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [dynamicBackgroundImageUrl, setDynamicBackgroundImageUrl] = useState("https://picsum.photos/seed/defaultweather/1920/1080");
+  const [dynamicAiHint, setDynamicAiHint] = useState("moody sky landscape");
 
   useEffect(() => {
     const updateCurrentTime = () => {
@@ -33,6 +37,22 @@ export default function WeatherPage() {
     const intervalId = setInterval(updateCurrentTime, 60000); // Update every minute
     return () => clearInterval(intervalId);
   }, []);
+
+  const applyWeatherStyling = useCallback((conditionText?: string) => {
+    const style = getThemeForWeather(conditionText);
+    setDynamicBackgroundImageUrl(style.backgroundImageUrl);
+    setDynamicAiHint(style.aiHint);
+
+    if (typeof document !== "undefined") {
+      if (style.mode === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+      updateRootCSSVariables(style.theme);
+    }
+  }, []);
+
 
   const fetchWeatherData = async (currentLocation: string, date: Date) => {
     setIsLoading(true);
@@ -44,6 +64,11 @@ export default function WeatherPage() {
       };
       const data = await getWeatherForecast(input);
       setWeatherData(data);
+      if (data?.current?.condition?.text) {
+        applyWeatherStyling(data.current.condition.text);
+      } else {
+        applyWeatherStyling(); // Apply default theme if no specific condition
+      }
     } catch (e) {
       console.error("Failed to fetch weather data:", e);
       let errorMessage = "Failed to load weather data. Please try again.";
@@ -54,6 +79,7 @@ export default function WeatherPage() {
       }
       setError(errorMessage);
       setWeatherData(null); // Clear old data on error
+      applyWeatherStyling(); // Apply default theme on error
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +89,12 @@ export default function WeatherPage() {
     fetchWeatherData(location, selectedDate);
   }, [location, selectedDate]);
 
+  // Apply default theme on initial mount
+  useEffect(() => {
+    applyWeatherStyling();
+  }, [applyWeatherStyling]);
+
+
   const handleLocationSearch = (newLocation: string) => {
     setLocation(newLocation);
   };
@@ -70,7 +102,6 @@ export default function WeatherPage() {
   const isDateDisabled = (dateToTest: Date): boolean => {
     const fiveYearsAgo = subDays(new Date(), 365 * 5);
     const thirtyDaysHence = addDays(new Date(), 30);
-    // Normalize dates to midnight to compare calendar days correctly
     const normalizedDateToTest = startOfDay(dateToTest);
     const normalizedFiveYearsAgo = startOfDay(fiveYearsAgo);
     const normalizedThirtyDaysHence = startOfDay(thirtyDaysHence);
@@ -98,19 +129,18 @@ export default function WeatherPage() {
     }
   };
   
-  const backgroundImageUrl = "https://picsum.photos/seed/sky/1920/1080";
-
   return (
     <div 
-      className="bg-center min-h-screen text-foreground relative font-sans selection:bg-primary/70 selection:text-primary-foreground animate-bg-pan"
+      className="bg-center min-h-screen text-foreground relative font-sans selection:bg-primary/70 selection:text-primary-foreground transition-colors duration-500"
       style={{ 
-        backgroundImage: `url(${backgroundImageUrl})`,
-        backgroundSize: '150% auto', 
+        backgroundImage: `url(${dynamicBackgroundImageUrl})`,
+        backgroundSize: 'cover', 
         backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed', // Keeps background fixed during scroll
       }}
-      data-ai-hint="cloudy sky landscape"
+      data-ai-hint={dynamicAiHint}
     >
-      <div className="absolute inset-0 bg-background/70 backdrop-blur-sm"></div> 
+      <div className="absolute inset-0 bg-background/70 backdrop-blur-sm transition-colors duration-500"></div> 
       
       <main className="relative z-10 p-4 sm:p-6 md:p-8 max-w-screen-xl mx-auto space-y-6 md:space-y-8">
         <WeatherHeader 
@@ -127,16 +157,16 @@ export default function WeatherPage() {
 
         {isLoading && (
           <div className="space-y-6 md:space-y-8">
-            <Skeleton className="h-[200px] w-full rounded-lg" />
-            <Skeleton className="h-[250px] w-full rounded-lg" />
-            <Skeleton className="h-[200px] w-full rounded-lg" />
-            <Skeleton className="h-[350px] w-full rounded-lg" /> 
-            <Skeleton className="h-[350px] w-full rounded-lg" /> 
+            <Skeleton className="h-[200px] w-full rounded-lg bg-muted/50" />
+            <Skeleton className="h-[250px] w-full rounded-lg bg-muted/50" />
+            <Skeleton className="h-[200px] w-full rounded-lg bg-muted/50" />
+            <Skeleton className="h-[350px] w-full rounded-lg bg-muted/50" /> 
+            <Skeleton className="h-[350px] w-full rounded-lg bg-muted/50" /> 
           </div>
         )}
 
         {error && !isLoading && (
-          <Alert variant="destructive" className="bg-card/50 backdrop-blur-md">
+          <Alert variant="destructive" className="bg-card/80 backdrop-blur-md border-destructive/70">
             <Terminal className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -164,7 +194,7 @@ export default function WeatherPage() {
           </>
         )}
          {!isLoading && !error && !weatherData && ( 
-          <Alert variant="default" className="bg-card/50 backdrop-blur-md">
+          <Alert variant="default" className="bg-card/80 backdrop-blur-md border-border/70">
             <Terminal className="h-4 w-4" />
             <AlertTitle>No Weather Data</AlertTitle>
             <AlertDescription>Could not load weather information. Please try searching for a location or refreshing.</AlertDescription>
@@ -177,4 +207,3 @@ export default function WeatherPage() {
     </div>
   );
 }
-

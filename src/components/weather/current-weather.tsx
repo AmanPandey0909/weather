@@ -1,3 +1,4 @@
+
 // src/components/weather/current-weather.tsx
 "use client";
 
@@ -8,7 +9,7 @@ import { getWeatherIcon } from '@/lib/weather-utils';
 
 interface CurrentWeatherProps {
   currentWeather: GetWeatherForecastOutput['current'];
-  locationName: string; // To display current location context if needed, though header has it
+  locationName: string;
 }
 
 const DetailItem: React.FC<{ icon: React.ElementType; label: string; value: string; className?: string }> = ({ icon: Icon, label, value, className }) => (
@@ -39,10 +40,10 @@ export function CurrentWeather({
   const WeatherIcon = getWeatherIcon(condition.text);
 
   return (
-    <div className="bg-card/30 backdrop-blur-md p-4 sm:p-6 rounded-lg shadow-xl mb-6 md:mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+    <div className="bg-card/50 backdrop-blur-md p-4 sm:p-6 rounded-lg shadow-xl mb-6 md:mb-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-border/50">
       {/* Left Side: Main Weather Info */}
       <div className="flex items-center gap-3 sm:gap-4">
-        <WeatherIcon className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 text-foreground" data-ai-hint={condition.text || "weather icon"} />
+        <WeatherIcon className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 text-primary" data-ai-hint={condition.text || "weather icon"} />
         <div>
           <p className="text-5xl sm:text-6xl md:text-7xl font-bold text-foreground">{temperature.toFixed(1)}°C</p>
           <p className="text-lg sm:text-xl text-muted-foreground capitalize">{condition.text}</p>

@@ -1,3 +1,4 @@
+
 // src/components/weather/daily-forecast-item.tsx
 "use client";
 
@@ -37,8 +38,8 @@ export function DailyForecastItem({
   return (
     <Card
       className={cn(
-        "bg-primary/20 hover:bg-primary/30 transition-colors duration-200 border-primary/30 shadow-md flex-1 min-w-[120px] sm:min-w-[140px] cursor-pointer focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-background outline-none",
-        isSelected && "ring-2 ring-primary-foreground ring-offset-1 ring-offset-background/80"
+        "bg-card/50 hover:bg-accent/70 backdrop-blur-sm transition-colors duration-200 border-border/60 shadow-md flex-1 min-w-[120px] sm:min-w-[140px] cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background outline-none",
+        isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background/80 bg-accent/80"
       )}
       onClick={handleSelect}
       onKeyDown={(e) => {
@@ -54,12 +55,12 @@ export function DailyForecastItem({
     >
       <CardContent className="p-3 sm:p-4 text-center flex flex-col items-center justify-between h-full">
         <div>
-          <p className="text-sm sm:text-base font-medium text-primary-foreground">{dayName}</p>
-          <p className="text-xs text-primary-foreground/80 mb-2">{dateString}</p>
+          <p className="text-sm sm:text-base font-medium text-card-foreground">{dayName}</p>
+          <p className="text-xs text-muted-foreground mb-2">{dateString}</p>
         </div>
-        <WeatherIcon className="w-8 h-8 sm:w-10 sm:h-10 text-primary-foreground my-2 sm:my-3" data-ai-hint={conditionText || "weather condition"} />
+        <WeatherIcon className="w-8 h-8 sm:w-10 sm:h-10 text-primary my-2 sm:my-3" data-ai-hint={conditionText || "weather condition"} />
         <div>
-          <p className="text-sm sm:text-base font-semibold text-primary-foreground">{maxTemp}°C / {minTemp}°C</p>
+          <p className="text-sm sm:text-base font-semibold text-card-foreground">{maxTemp}°C / {minTemp}°C</p>
         </div>
       </CardContent>
     </Card>

@@ -43,14 +43,12 @@ export function WeatherHeader({
     }
   };
 
-  // Update searchInput when currentLocation prop changes externally
   useEffect(() => {
     setSearchInput(currentLocation);
   }, [currentLocation]);
 
   return (
     <div className="flex flex-col md:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
-      {/* Left Side: Location and Date */}
       <div className="flex flex-col items-center md:items-start">
         <div className="flex items-center text-xl sm:text-2xl font-semibold text-foreground mb-1">
           <MapPin className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary" />
@@ -62,7 +60,6 @@ export function WeatherHeader({
         </div>
       </div>
 
-      {/* Right Side: Search, Date Nav, Time */}
       <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full md:w-auto">
         <form onSubmit={handleSearch} className="relative w-full sm:w-auto md:w-56">
           <Input
@@ -70,7 +67,7 @@ export function WeatherHeader({
             placeholder="Search City or ZIP"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="bg-card/50 border-border/70 placeholder-muted-foreground text-sm pr-10"
+            className="bg-input/70 border-border/70 placeholder-muted-foreground text-sm pr-10 backdrop-blur-sm"
             aria-label="Search City or ZIP Code"
           />
           <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-primary">
@@ -78,21 +75,21 @@ export function WeatherHeader({
           </Button>
         </form>
         
-        <div className="flex items-center gap-1 bg-card/30 backdrop-blur-sm px-2 py-1.5 rounded-md">
-          <Button variant="ghost" size="icon" onClick={onPreviousDay} className="h-7 w-7" disabled={isDateDisabled(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() -1))}>
+        <div className="flex items-center gap-1 bg-card/50 backdrop-blur-sm px-2 py-1.5 rounded-md border border-border/50">
+          <Button variant="ghost" size="icon" onClick={onPreviousDay} className="h-7 w-7 hover:bg-accent/70" disabled={isDateDisabled(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() -1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant={"outline"}
-                className="h-7 w-auto px-2 text-xs bg-transparent hover:bg-accent/50 border-primary/30"
+                className="h-7 w-auto px-2 text-xs bg-background/50 hover:bg-accent/70 border-border/70 text-foreground"
               >
                 <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
                 {format(selectedDate, "MMM d")}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-card border-border shadow-xl" align="center">
+            <PopoverContent className="w-auto p-0 bg-card border-border shadow-xl backdrop-blur-md" align="center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -102,12 +99,12 @@ export function WeatherHeader({
               />
             </PopoverContent>
           </Popover>
-          <Button variant="ghost" size="icon" onClick={onNextDay} className="h-7 w-7" disabled={isDateDisabled(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 1))}>
+          <Button variant="ghost" size="icon" onClick={onNextDay} className="h-7 w-7 hover:bg-accent/70" disabled={isDateDisabled(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="flex items-center text-base sm:text-lg font-medium text-foreground bg-card/30 backdrop-blur-sm px-3 py-1.5 rounded-md">
+        <div className="flex items-center text-base sm:text-lg font-medium text-foreground bg-card/50 backdrop-blur-sm px-3 py-1.5 rounded-md border border-border/50">
           <Clock className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary/90" />
           <span>{currentTime}</span>
         </div>
@@ -115,4 +112,3 @@ export function WeatherHeader({
     </div>
   );
 }
-

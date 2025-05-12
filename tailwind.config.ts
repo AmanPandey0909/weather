@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 import defaultTheme from 'tailwindcss/defaultTheme';
 
@@ -88,15 +89,12 @@ export default {
   					height: '0'
   				}
   			},
-        'bg-pan': {
-          '0%': { backgroundPosition: '0% 50%' },
-          '100%': { backgroundPosition: '100% 50%' },
-        },
+        // Removed 'bg-pan' keyframe
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out',
-        'bg-pan': 'bg-pan 90s linear infinite alternate',
+        // Removed 'bg-pan' animation
   		}
   	}
   },

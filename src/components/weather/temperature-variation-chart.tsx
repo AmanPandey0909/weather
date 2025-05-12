@@ -1,3 +1,4 @@
+
 // src/components/weather/temperature-variation-chart.tsx
 "use client";
 
@@ -17,7 +18,6 @@ import { format, parseISO } from 'date-fns';
 import { Thermometer } from 'lucide-react';
 import type { z } from 'genkit/zod';
 
-// Infer the type from the Zod schema
 type DailyForecastItem = z.infer<typeof DailyForecastItemZodSchema>;
 
 interface TemperatureVariationChartProps {
@@ -27,18 +27,18 @@ interface TemperatureVariationChartProps {
 const chartConfig = {
   maxTemp: {
     label: "Max Temp (°C)",
-    color: "hsl(var(--chart-1))", // Reddish color for max temp
+    color: "hsl(var(--chart-1))", 
   },
   minTemp: {
     label: "Min Temp (°C)",
-    color: "hsl(var(--chart-2))", // Bluish color for min temp
+    color: "hsl(var(--chart-2))", 
   },
 } satisfies ChartConfig;
 
 export function TemperatureVariationChart({ dailyData }: TemperatureVariationChartProps) {
   if (!dailyData || dailyData.length === 0) {
     return (
-      <Card className="bg-card/30 backdrop-blur-md shadow-xl">
+      <Card className="bg-card/50 backdrop-blur-md shadow-xl border border-border/50">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl font-semibold text-foreground flex items-center">
             <Thermometer className="w-5 h-5 mr-2 text-primary" />
@@ -47,7 +47,7 @@ export function TemperatureVariationChart({ dailyData }: TemperatureVariationCha
           <CardDescription>7-Day Temperature Trend</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+          <div className="h-[300px] flex items-center justify-center text-muted-foreground bg-muted/30 rounded-md">
             No temperature data available for the chart.
           </div>
         </CardContent>
@@ -56,8 +56,6 @@ export function TemperatureVariationChart({ dailyData }: TemperatureVariationCha
   }
 
   const chartData = dailyData.map(day => {
-    // The date from AI is YYYY-MM-DD. parseISO can handle this directly.
-    // Or ensure it's treated as local if that's the intent. For consistency with display, using parseISO is robust.
     const dateObj = parseISO(day.date); 
     return {
       name: `${day.dayName.substring(0,3)}, ${format(dateObj, "MMM d")}`,
@@ -67,7 +65,7 @@ export function TemperatureVariationChart({ dailyData }: TemperatureVariationCha
   });
 
   return (
-    <Card className="bg-card/30 backdrop-blur-md shadow-xl">
+    <Card className="bg-card/50 backdrop-blur-md shadow-xl border border-border/50">
       <CardHeader>
         <CardTitle className="text-lg sm:text-xl font-semibold text-foreground flex items-center">
             <Thermometer className="w-5 h-5 mr-2 text-primary" />
@@ -87,25 +85,25 @@ export function TemperatureVariationChart({ dailyData }: TemperatureVariationCha
                 bottom: 5,
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.5)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.3)" />
               <XAxis
                 dataKey="name"
                 tickLine={false}
-                axisLine={false}
+                axisLine={{ stroke: "hsl(var(--border)/0.5)" }}
                 tickMargin={8}
                 className="text-xs fill-muted-foreground"
               />
               <YAxis
                 tickLine={false}
-                axisLine={false}
+                axisLine={{ stroke: "hsl(var(--border)/0.5)" }}
                 tickMargin={8}
-                tickFormatter={(value) => `${value}°`} // Shorten to just degree symbol
+                tickFormatter={(value) => `${value}°`} 
                 className="text-xs fill-muted-foreground"
                 domain={['auto', 'auto']}
               />
               <ChartTooltip
                 cursor={true}
-                content={<ChartTooltipContent indicator="line" labelClassName="font-semibold" className="bg-card/80 backdrop-blur-sm shadow-lg" />}
+                content={<ChartTooltipContent indicator="line" labelClassName="font-semibold" className="bg-popover/80 backdrop-blur-sm shadow-lg border-border/70" />}
               />
               <ChartLegend content={<ChartLegendContent iconClassName="mr-1.5" className="text-sm"/>} />
               <Line
@@ -122,6 +120,8 @@ export function TemperatureVariationChart({ dailyData }: TemperatureVariationCha
                 activeDot={{
                   r: 5,
                   strokeWidth: 2,
+                  stroke: "hsl(var(--background))",
+                  fill: "var(--color-maxTemp)",
                 }}
                  name="Max Temp"
               />
@@ -139,6 +139,8 @@ export function TemperatureVariationChart({ dailyData }: TemperatureVariationCha
                 activeDot={{
                   r: 5,
                   strokeWidth: 2,
+                   stroke: "hsl(var(--background))",
+                  fill: "var(--color-minTemp)",
                 }}
                 name="Min Temp"
               />

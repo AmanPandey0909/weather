@@ -1,3 +1,4 @@
+
 // src/components/weather/location-map.tsx
 "use client";
 
@@ -26,19 +27,25 @@ export function LocationMap({ latitude, longitude, locationName }: LocationMapPr
     if (hasCoordinates) {
       const lat = latitude as number;
       const lon = longitude as number;
-      let layerParam = 'wind'; // Default to wind if both are on or wind is on
-
+      let layers = [];
+      if (showWind) layers.push('wind');
+      if (showClouds) layers.push('clouds');
+      
+      // Windy.com embed allows multiple layers by comma separation, but typically one primary visual layer is best.
+      // Let's prioritize wind if both, then clouds, then a base map.
+      let layerParam = 'wind'; // Default to wind
       if (showWind && showClouds) {
-        layerParam = 'wind'; // Prioritize wind if both are selected
-      } else if (showWind) {
-        layerParam = 'wind';
+        // Showing both might be too cluttered on embed; Windy might default to one.
+        // For clarity, let's allow one active layer to be prominent or let Windy decide default.
+        // To explicitly show wind and then clouds, you might need `layer=wind&activate=clouds` but this is advanced.
+        // Simple approach: pick one or let embed default.
+        layerParam = 'wind'; // Or 'clouds', or 'radar' etc.
       } else if (showClouds) {
         layerParam = 'clouds';
-      } else {
-        layerParam = 'satellite'; // Show satellite if both are off for a more basic map
+      } else if (!showWind && !showClouds) {
+        layerParam = 'radar'; // Show radar or satellite as a base if nothing is selected.
       }
       
-      // Common Windy parameters
       const baseWindyUrl = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=7&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km/h&metricTemp=%C2%B0C&radarRange=-1`;
       
       setIframeSrc(`${baseWindyUrl}&layer=${layerParam}`);
@@ -50,7 +57,7 @@ export function LocationMap({ latitude, longitude, locationName }: LocationMapPr
   }, [latitude, longitude, showWind, showClouds, hasCoordinates]);
 
   return (
-    <Card className="bg-card/30 backdrop-blur-md shadow-xl">
+    <Card className="bg-card/50 backdrop-blur-md shadow-xl border border-border/50">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg sm:text-xl font-semibold text-foreground flex items-center">
           <MapPin className="w-5 h-5 mr-2 text-primary" />
@@ -59,7 +66,7 @@ export function LocationMap({ latitude, longitude, locationName }: LocationMapPr
         {locationName && <p className="text-sm text-muted-foreground mt-1">Map data for: <span className="font-medium text-foreground">{locationName}</span></p>}
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col sm:flex-row gap-4 mb-4 p-3 bg-background/30 rounded-md border border-border/50">
+        <div className="flex flex-col sm:flex-row gap-4 mb-4 p-3 bg-background/20 rounded-md border border-border/30">
           <div className="flex items-center space-x-2">
             <Switch
               id="show-wind"
@@ -88,9 +95,9 @@ export function LocationMap({ latitude, longitude, locationName }: LocationMapPr
         
         {mapReady && iframeSrc ? (
           <iframe
-            key={iframeSrc} // Force re-render when src changes
+            key={iframeSrc} 
             width="100%"
-            height="350" // Increased height for better map visibility
+            height="350"
             frameBorder="0"
             scrolling="no"
             marginHeight={0}
@@ -102,15 +109,15 @@ export function LocationMap({ latitude, longitude, locationName }: LocationMapPr
           >
           </iframe>
         ) : (
-          <div className="bg-muted/50 h-[350px] rounded-md flex items-center justify-center border border-dashed border-border">
-            <div className="text-center p-4 bg-background/70 rounded-md backdrop-blur-sm">
+          <div className="bg-muted/30 h-[350px] rounded-md flex items-center justify-center border border-dashed border-border/70">
+            <div className="text-center p-4 bg-background/50 rounded-md backdrop-blur-sm">
               <p className="text-sm text-muted-foreground">
                 {hasCoordinates ? "Generating map..." : (locationName ? "Coordinates not available to display map for this view." : "Enter a location to see map data.")}
               </p>
             </div>
           </div>
         )}
-        <p className="text-xs text-muted-foreground mt-2 text-center sm:text-left">Map provided by Windy.com. Layers might interact; explore options within the map.</p>
+        <p className="text-xs text-muted-foreground mt-2 text-center sm:text-left">Map provided by Windy.com. Selected layers will attempt to display.</p>
       </CardContent>
     </Card>
   );
