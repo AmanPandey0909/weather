@@ -81,19 +81,21 @@ export default function WeatherPage() {
         errorMessage = e.message;
       }
       
-      // More specific error message for API key issues (which would now be on the ASP.NET backend side)
-      // This check might be less accurate now, as the frontend doesn't directly deal with Genkit/Gemini keys.
-      // However, if the backend proxies an API key error, this could still be useful.
-      if (errorMessage.toLowerCase().includes("api key") || 
-          errorMessage.toLowerCase().includes("gemini_api_key") || 
-          errorMessage.toLowerCase().includes("google_api_key") ||
-          errorMessage.toLowerCase().includes("failed_precondition") ||
-          errorMessage.toLowerCase().includes("authentication failed") ||
-          errorMessage.toLowerCase().includes("permission denied") ||
-          errorMessage.toLowerCase().includes("invalid api key")) { 
-        errorMessage = "There was an issue with the backend weather service. Please check service configuration (e.g. API keys).";
+      const lowerErrorMessage = errorMessage.toLowerCase();
+
+      if (lowerErrorMessage === "backend api url is not configured.") {
+        errorMessage = "The application's backend API URL is not configured. This is a server-side setup issue. Please contact an administrator.";
+      } else if (lowerErrorMessage === "fetch failed") {
+        errorMessage = "The weather data service is currently unreachable from our backend. Please ensure the backend service (ASP.NET) is running and the API URL is correctly configured. Try again later.";
+      } else if (lowerErrorMessage.includes("api key") || 
+          lowerErrorMessage.includes("gemini_api_key") || 
+          lowerErrorMessage.includes("google_api_key") ||
+          lowerErrorMessage.includes("failed_precondition") || // Often related to API key/billing
+          lowerErrorMessage.includes("authentication failed") ||
+          lowerErrorMessage.includes("permission denied")) { 
+        errorMessage = "There's an issue with the backend weather service configuration (e.g., API keys or permissions). Please contact an administrator.";
       } else {
-        errorMessage = `Failed to load weather data: ${errorMessage}. Please check your connection and try again.`;
+        errorMessage = `Failed to load weather data: ${errorMessage}. Please check your internet connection and try again.`;
       }
 
       setError(errorMessage);
