@@ -13,7 +13,7 @@ import type { GetWeatherForecastOutput, GetWeatherForecastInput } from '@/ai/sch
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { format, subDays, addDays, isFuture, isPast } from 'date-fns';
+import { format, subDays, addDays, isBefore, isAfter } from 'date-fns';
 
 export default function WeatherPage() {
   const [currentTime, setCurrentTime] = useState("");
@@ -44,7 +44,13 @@ export default function WeatherPage() {
       setWeatherData(data);
     } catch (e) {
       console.error("Failed to fetch weather data:", e);
-      setError("Failed to load weather data. Please try again.");
+      let errorMessage = "Failed to load weather data. Please try again.";
+      if (e instanceof Error && e.message) {
+        errorMessage = e.message.includes("API key not valid") 
+          ? "Invalid API Key. Please check your .env configuration." 
+          : `Failed to load weather data: ${e.message.substring(0, 100)}${e.message.length > 100 ? '...' : ''}`;
+      }
+      setError(errorMessage);
       setWeatherData(null); // Clear old data on error
     } finally {
       setIsLoading(false);
@@ -59,25 +65,33 @@ export default function WeatherPage() {
     setLocation(newLocation);
   };
 
+  const isDateDisabled = (dateToTest: Date): boolean => {
+    const fiveYearsAgo = subDays(new Date(), 365 * 5);
+    const thirtyDaysHence = addDays(new Date(), 30);
+    // Normalize dates to midnight to compare calendar days correctly
+    const normalizedDateToTest = new Date(dateToTest.getFullYear(), dateToTest.getMonth(), dateToTest.getDate());
+    const normalizedFiveYearsAgo = new Date(fiveYearsAgo.getFullYear(), fiveYearsAgo.getMonth(), fiveYearsAgo.getDate());
+    const normalizedThirtyDaysHence = new Date(thirtyDaysHence.getFullYear(), thirtyDaysHence.getMonth(), thirtyDaysHence.getDate());
+
+    return isAfter(normalizedDateToTest, normalizedThirtyDaysHence) || isBefore(normalizedDateToTest, normalizedFiveYearsAgo);
+  };
+
   const handleDateChange = (newDate: Date) => {
-    // Prevent selecting dates too far in the future or past if necessary
-    // This logic is already in the Calendar component's disabled prop,
-    // but good to have a safeguard here if direct date manipulation was possible.
-    setSelectedDate(newDate);
+    if (!isDateDisabled(newDate)) {
+      setSelectedDate(newDate);
+    }
   };
 
   const handlePreviousDay = () => {
     const newDate = subDays(selectedDate, 1);
-    // Add any hard limits if needed, e.g., not before 5 years ago
-    if (!isPast(addDays(newDate, - (365*5)))) { // Example: Check if newDate is not more than 5 years ago
+    if (!isDateDisabled(newDate)) {
        setSelectedDate(newDate);
     }
   };
 
   const handleNextDay = () => {
     const newDate = addDays(selectedDate, 1);
-    // Add any hard limits if needed, e.g., not more than 30 days in future
-    if (!isFuture(subDays(newDate, 31))) { // Example: Check if newDate is not more than 30 days ahead
+    if (!isDateDisabled(newDate)) {
         setSelectedDate(newDate);
     }
   };
@@ -102,6 +116,7 @@ export default function WeatherPage() {
           onNextDay={handleNextDay}
           currentTime={currentTime || "Loading..."}
           displayDate={weatherData?.displayDate || format(selectedDate, "EEEE, MMMM d")}
+          isDateDisabled={isDateDisabled}
         />
 
         {isLoading && (
@@ -137,3 +152,4 @@ export default function WeatherPage() {
     </div>
   );
 }
+

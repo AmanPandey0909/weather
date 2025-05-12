@@ -1,8 +1,9 @@
+
 // src/components/weather/weather-header.tsx
 "use client";
 
-import type * as React from 'react';
-import { useState } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { MapPin, CalendarDays, Clock, Search, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ interface WeatherHeaderProps {
   onNextDay: () => void;
   currentTime: string;
   displayDate: string;
+  isDateDisabled: (date: Date) => boolean;
 }
 
 export function WeatherHeader({ 
@@ -29,7 +31,8 @@ export function WeatherHeader({
   onPreviousDay,
   onNextDay,
   currentTime,
-  displayDate
+  displayDate,
+  isDateDisabled
 }: WeatherHeaderProps) {
   const [searchInput, setSearchInput] = useState(currentLocation);
 
@@ -39,6 +42,11 @@ export function WeatherHeader({
       onSearchLocation(searchInput.trim());
     }
   };
+
+  // Update searchInput when currentLocation prop changes externally
+  useEffect(() => {
+    setSearchInput(currentLocation);
+  }, [currentLocation]);
 
   return (
     <div className="flex flex-col md:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
@@ -71,7 +79,7 @@ export function WeatherHeader({
         </form>
         
         <div className="flex items-center gap-1 bg-card/30 backdrop-blur-sm px-2 py-1.5 rounded-md">
-          <Button variant="ghost" size="icon" onClick={onPreviousDay} className="h-7 w-7">
+          <Button variant="ghost" size="icon" onClick={onPreviousDay} className="h-7 w-7" disabled={isDateDisabled(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() -1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Popover>
@@ -90,11 +98,11 @@ export function WeatherHeader({
                 selected={selectedDate}
                 onSelect={(date) => date && onDateChange(date)}
                 initialFocus
-                disabled={(date) => date > addDays(new Date(), 30) || date < subDays(new Date(), 365*5)} // Example: 5 years past, 30 days future
+                disabled={isDateDisabled}
               />
             </PopoverContent>
           </Popover>
-          <Button variant="ghost" size="icon" onClick={onNextDay} className="h-7 w-7">
+          <Button variant="ghost" size="icon" onClick={onNextDay} className="h-7 w-7" disabled={isDateDisabled(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -107,3 +115,4 @@ export function WeatherHeader({
     </div>
   );
 }
+
