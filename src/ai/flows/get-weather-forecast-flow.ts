@@ -40,6 +40,7 @@ const getWeatherForecastFlow = ai.defineFlow(
 
 const prompt = ai.definePrompt({
   name: 'weatherForecastPrompt',
+  model: 'googleai/gemini-1.5-flash-latest', // Added model here
   input: { schema: GetWeatherForecastInputSchema },
   output: { schema: GetWeatherForecastOutputSchema },
   prompt: `You are a sophisticated weather API. Provide a detailed and realistic weather forecast for the location "{{location}}" on {{#if date}}the date "{{date}}"{{else}}today{{/if}}.
@@ -47,7 +48,7 @@ Respond strictly in the JSON format defined by the output schema. Do not add any
 
 Key instructions for your response:
 - Temperatures: All temperatures must be in Celsius.
-- Location Name: The 'locationName' field in your output JSON should closely reflect the user's input: "{{location}}". If "{{location}}" is an abbreviation or common name (e.g., 'NYC', 'SF'), you may expand it to its common full name (e.g., 'New York City', 'San Francisco'). However, prioritize reflecting the user's original input intent as accurately as possible.
+- Location Name: The 'locationName' field in your output JSON should be exactly "{{location}}". Do not abbreviate or expand it. If the user enters "NYC", output "NYC". If they enter "New York City", output "New York City".
 - Display Date: The 'displayDate' field should be a human-readable format of the target date (e.g., "Friday, July 14").
 - Current Weather ('current' field):
     - If the target date is today, provide realistic current weather conditions for "{{location}}".
