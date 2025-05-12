@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/markup-generator.ts';
-import '@/ai/flows/code-quality-analyzer.ts';
+// Removed imports for markup-generator.ts and code-quality-analyzer.ts
+// Add new AI flow imports here if any are created for the weather app.
