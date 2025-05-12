@@ -71,11 +71,21 @@ export default function WeatherPage() {
       }
     } catch (e) {
       console.error("Failed to fetch weather data:", e);
-      let errorMessage = "Failed to load weather data. Please try again.";
+      let errorMessage = "An unexpected error occurred while fetching weather data. Please try again later."; // Default generic error
       if (e instanceof Error && e.message) {
-        errorMessage = e.message.includes("API key not valid") 
-          ? "Invalid API Key. Please check your .env configuration." 
-          : `Failed to load weather data: ${e.message.substring(0, 100)}${e.message.length > 100 ? '...' : ''}`;
+        const lowerCaseMessage = e.message.toLowerCase();
+        if (lowerCaseMessage.includes("api key") || 
+            lowerCaseMessage.includes("gemini_api_key") || 
+            lowerCaseMessage.includes("google_api_key") ||
+            lowerCaseMessage.includes("failed_precondition") ||
+            lowerCaseMessage.includes("authentication failed") ||
+            lowerCaseMessage.includes("permission denied") ||
+            lowerCaseMessage.includes("invalid api key")) { // More general check for invalid api key
+          errorMessage = "API Key or Permission Error. Please check your API key configuration in the .env file and ensure it has the necessary permissions.";
+        } else {
+          // For other errors, show a generic message.
+          errorMessage = `Failed to load weather data. Please check your connection and try again.`;
+        }
       }
       setError(errorMessage);
       setWeatherData(null); // Clear old data on error
@@ -87,12 +97,15 @@ export default function WeatherPage() {
 
   useEffect(() => {
     fetchWeatherData(location, selectedDate);
-  }, [location, selectedDate]);
+  }, [location, selectedDate, applyWeatherStyling]); // Added applyWeatherStyling to dependencies as it's used in error case
 
   // Apply default theme on initial mount
   useEffect(() => {
-    applyWeatherStyling();
-  }, [applyWeatherStyling]);
+    // Initial styling application
+    if (!weatherData && !isLoading && !error) { // Only apply default if no data, not loading, and no error
+        applyWeatherStyling();
+    }
+  }, [applyWeatherStyling, weatherData, isLoading, error]);
 
 
   const handleLocationSearch = (newLocation: string) => {
@@ -207,3 +220,4 @@ export default function WeatherPage() {
     </div>
   );
 }
+
