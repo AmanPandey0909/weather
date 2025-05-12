@@ -12,6 +12,18 @@ interface LocationMapProps {
 }
 
 export function LocationMap({ latitude, longitude, locationName }: LocationMapProps) {
+  const hasCoordinates = typeof latitude === 'number' && typeof longitude === 'number';
+  let iframeSrc = '';
+
+  if (hasCoordinates) {
+    const lat = latitude as number;
+    const lon = longitude as number;
+    // Define a small bounding box around the location for the map view
+    const delta = 0.05; // Adjust for zoom level, smaller is more zoomed in
+    const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+    iframeSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
+  }
+
   return (
     <Card className="bg-card/30 backdrop-blur-md shadow-xl">
       <CardHeader className="pb-2">
@@ -21,33 +33,31 @@ export function LocationMap({ latitude, longitude, locationName }: LocationMapPr
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {locationName && <p className="text-sm text-muted-foreground mb-2">Showing map data for: <span className="font-medium text-foreground">{locationName}</span></p>}
+        {locationName && <p className="text-sm text-muted-foreground mb-3">Showing map data for: <span className="font-medium text-foreground">{locationName}</span></p>}
         
-        <div 
-          className="bg-muted/50 h-48 sm:h-64 rounded-md flex items-center justify-center border border-dashed border-border"
-          data-ai-hint="world map"
-          style={{
-            backgroundImage: `url('https://picsum.photos/seed/mapgraphic/600/400')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-          aria-label="Map placeholder"
-        >
-          <div className="text-center p-4 bg-background/70 rounded-md backdrop-blur-sm">
-            {typeof latitude === 'number' && typeof longitude === 'number' ? (
-              <>
-                <p className="text-sm font-medium text-foreground">Coordinates:</p>
-                <p className="text-xs text-muted-foreground">Lat: {latitude.toFixed(4)}, Lon: {longitude.toFixed(4)}</p>
-                <p className="text-xs mt-2 text-muted-foreground">(Actual map integration pending)</p>
-              </>
-            ) : (
+        {hasCoordinates ? (
+          <iframe
+            width="100%"
+            height="250" // You can adjust height as needed, sm:h-64 was roughly 256px
+            frameBorder="0"
+            scrolling="no"
+            marginHeight={0}
+            marginWidth={0}
+            src={iframeSrc}
+            title={`Map of ${locationName || 'selected location'}`}
+            className="rounded-md border border-border shadow-sm"
+            aria-label={`Map showing ${locationName || 'selected location'}`}
+          >
+          </iframe>
+        ) : (
+          <div className="bg-muted/50 h-48 sm:h-64 rounded-md flex items-center justify-center border border-dashed border-border">
+            <div className="text-center p-4 bg-background/70 rounded-md backdrop-blur-sm">
               <p className="text-sm text-muted-foreground">
-                {locationName ? "Coordinates not available for this view." : "Enter a location to see map data."}
-                <br/>(Actual map integration pending)
+                {locationName ? "Coordinates not available to display map for this view." : "Enter a location to see map data."}
               </p>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
