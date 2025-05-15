@@ -18,12 +18,9 @@ export async function GET(request: NextRequest) {
   const aspnetApiBaseUrl = process.env.ASPNET_API_BASE_URL;
   if (!aspnetApiBaseUrl) {
     console.error("ASPNET_API_BASE_URL environment variable is not set.");
-    return NextResponse.json({ message: 'Backend API URL is not configured.' }, { status: 500 });
+    return NextResponse.json({ message: 'Backend API URL is not configured. Please set ASPNET_API_BASE_URL in your .env file.' }, { status: 500 });
   }
 
-  // Construct the URL for the ASP.NET Web API
-  // Assuming the ASP.NET API endpoint is /api/WeatherForecast
-  // And it accepts location and date as query parameters
   const apiUrl = `${aspnetApiBaseUrl}/api/WeatherForecast?location=${encodeURIComponent(location)}&date=${encodeURIComponent(date)}`;
 
   try {
@@ -31,7 +28,6 @@ export async function GET(request: NextRequest) {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        // Add any other necessary headers, like API keys for the ASP.NET API if required
       },
     });
 
@@ -45,7 +41,6 @@ export async function GET(request: NextRequest) {
           errorMessage = parsedError.message;
         }
       } catch (e) {
-        // If error body is not JSON or doesn't have message, use the text or statusText
         errorMessage = errorBody || `Error fetching weather data from backend: ${apiResponse.statusText}`;
       }
       return NextResponse.json({ message: errorMessage }, { status: apiResponse.status });
@@ -56,10 +51,15 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error calling ASP.NET API:', error);
-    let message = 'Failed to connect to the weather service.';
+    let detailedMessage = 'An unexpected error occurred while trying to contact the backend weather service.';
     if (error instanceof Error) {
-        message = error.message;
+      // Check for common fetch failure messages or TypeError which can indicate network issues
+      if (error.message.toLowerCase().includes('fetch failed') || error.name === 'TypeError') {
+        detailedMessage = `Failed to connect to the ASP.NET weather backend at ${aspnetApiBaseUrl}. Please ensure the service is running and the ASPNET_API_BASE_URL environment variable is correctly configured. Original error: ${error.message}`;
+      } else {
+        detailedMessage = `Error communicating with the ASP.NET weather backend: ${error.message}`;
+      }
     }
-    return NextResponse.json({ message }, { status: 500 });
+    return NextResponse.json({ message: detailedMessage }, { status: 500 });
   }
 }
