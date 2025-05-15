@@ -1,9 +1,10 @@
+
 // src/app/page.tsx
 "use client";
 
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { GetWeatherForecastOutput } from '@/ai/schemas/weather-forecast-schemas';
+import type { GetWeatherForecastOutput } from '@/ai/schemas/weather-forecast-schemas';
 import { WeatherHeader } from '@/components/weather/weather-header';
 import { CurrentWeather } from '@/components/weather/current-weather';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
@@ -13,7 +14,7 @@ import { TemperatureVariationChart } from '@/components/weather/temperature-vari
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { format, addDays, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { format, addDays, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { getThemeForWeather, updateRootCSSVariables, WeatherStyle } from '@/lib/theme-utils';
 import Image from 'next/image';
@@ -44,15 +45,17 @@ export default function WeatherPage() {
       }
       
       const data: GetWeatherForecastOutput = await response.json();
+
+      // Ensure daily forecast dates are parsed correctly into Date objects for the state if needed elsewhere,
+      // or handle directly in components. For selectedDate logic, it's already a Date.
+      // If `data.daily` contains date strings, components like DailyForecast parse them.
       setWeatherData(data);
       setLocation(data.locationName); // Update location from API response for consistency
 
-      // Update theme based on current weather of the fetched data
       const theme = getThemeForWeather(data.current.condition.text);
       setCurrentTheme(theme);
       updateRootCSSVariables(theme.theme);
       document.documentElement.className = theme.mode;
-
 
     } catch (e: any) {
       console.error("Fetch weather data error:", e);
@@ -64,10 +67,13 @@ export default function WeatherPage() {
         } else if (lowerErrorMessage.includes("failed_precondition") && lowerErrorMessage.includes("api key")) {
            errorMessage = "Genkit API Key precondition failed. Ensure GOOGLE_API_KEY or GEMINI_API_KEY is correctly set in your environment variables.";
         } else if (lowerErrorMessage.includes("fetch failed")) {
-           errorMessage = "The weather data service is currently unreachable. This could be due to the backend service (ASP.NET) not running, an incorrect API URL configuration, or a network issue between this application and the backend. Please verify the backend service status and configuration.";
+           errorMessage = "The weather data service is currently unreachable. This could be due to the backend service (ASP.NET) not running, an incorrect API URL configuration (ASPNET_API_BASE_URL in .env), or a network issue between this application and the backend. Please verify the backend service status and configuration.";
         } else if (lowerErrorMessage.includes("llm did not return an output")) {
             errorMessage = "The AI model did not return a valid weather forecast. This might be a temporary issue with the AI service or the input parameters. Please try again later or with a different location/date.";
-        } else {
+        } else if (e.message.includes("Backend API URL is not configured")) {
+            errorMessage = "The backend weather API (ASP.NET) is not configured. Please set the ASPNET_API_BASE_URL environment variable in your .env file.";
+        }
+         else {
           errorMessage = e.message;
         }
       }
@@ -77,7 +83,6 @@ export default function WeatherPage() {
         title: "Error",
         description: errorMessage,
       });
-      // Fallback to default theme on error
       const defaultThemeStyle = getThemeForWeather('default');
       setCurrentTheme(defaultThemeStyle);
       updateRootCSSVariables(defaultThemeStyle.theme);
@@ -89,7 +94,8 @@ export default function WeatherPage() {
 
   useEffect(() => {
     fetchWeatherData(location, selectedDate);
-  }, [location, selectedDate, fetchWeatherData]);
+  }, [fetchWeatherData, location, selectedDate]);
+
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -99,36 +105,38 @@ export default function WeatherPage() {
   }, []);
   
   useEffect(() => {
-    // Set initial theme on load
-    if (!currentTheme) {
-      const initialTheme = getThemeForWeather(weatherData?.current.condition.text);
+    if (!currentTheme && weatherData?.current?.condition?.text) {
+      const initialTheme = getThemeForWeather(weatherData.current.condition.text);
       setCurrentTheme(initialTheme);
       updateRootCSSVariables(initialTheme.theme);
       document.documentElement.className = initialTheme.mode;
+    } else if (!currentTheme) {
+      const defaultThemeStyle = getThemeForWeather('default');
+      setCurrentTheme(defaultThemeStyle);
+      updateRootCSSVariables(defaultThemeStyle.theme);
+      document.documentElement.className = defaultThemeStyle.mode;
     }
   }, [weatherData, currentTheme]);
 
 
   const handleSearchLocation = (newLocation: string) => {
     setLocation(newLocation);
-    // Reset selectedDate to today when location changes, or keep it if desired.
-    // For simplicity, let's keep current date selection logic.
-    // setSelectedDate(new Date()); 
   };
 
-  const isDateDisabled = (date: Date): boolean => {
+  const isDateDisabledCallback = useCallback((date: Date): boolean => {
     const today = startOfDay(new Date());
-    const minDate = subDays(today, MAX_PAST_DAYS);
-    const maxDate = addDays(today, MAX_FUTURE_DAYS);
-    return !isWithinInterval(date, { start: minDate, end: maxDate });
-  };
+    // Ensure comparison is with start of day for min/max to avoid time-of-day issues
+    const minDate = startOfDay(subDays(today, MAX_PAST_DAYS));
+    const maxDate = endOfDay(addDays(today, MAX_FUTURE_DAYS)); // Use end of day for max to include the full last day
+    return !isWithinInterval(startOfDay(date), { start: minDate, end: maxDate });
+  }, []);
 
-  const handleDateChange = (date: Date) => {
-    if (!isDateDisabled(date)) {
-      setSelectedDate(date);
-    } else {
+  const handleDateChange = (date: Date | undefined) => {
+    if (date && !isDateDisabledCallback(date)) {
+      setSelectedDate(startOfDay(date));
+    } else if (date) {
        toast({
-        variant: "destructive",
+        variant: "default",
         title: "Date out of range",
         description: `Please select a date within ${MAX_PAST_DAYS} days in the past and ${MAX_FUTURE_DAYS} days in the future.`,
       });
@@ -137,20 +145,30 @@ export default function WeatherPage() {
   
   const handlePreviousDay = () => {
     const prevDay = subDays(selectedDate, 1);
-    if (!isDateDisabled(prevDay)) {
+    if (!isDateDisabledCallback(prevDay)) {
       setSelectedDate(prevDay);
     }
   };
 
   const handleNextDay = () => {
     const nextDay = addDays(selectedDate, 1);
-     if (!isDateDisabled(nextDay)) {
+     if (!isDateDisabledCallback(nextDay)) {
       setSelectedDate(nextDay);
     }
   };
   
-  const handleDailyForecastSelect = (date: Date) => {
-    setSelectedDate(date);
+  const handleDailyForecastSelect = (dateStr: string) => {
+    // Assuming dateStr is 'YYYY-MM-DD' from daily forecast data
+    const newSelectedDate = startOfDay(parseISO(dateStr)); // Use parseISO for YYYY-MM-DD
+    if (!isDateDisabledCallback(newSelectedDate)) {
+        setSelectedDate(newSelectedDate);
+    } else {
+        toast({
+            variant: "default",
+            title: "Date out of range",
+            description: "Cannot select this date from the daily forecast as it's out of the allowed range.",
+        });
+    }
   };
 
   return (
@@ -159,8 +177,8 @@ export default function WeatherPage() {
         <Image
           src={currentTheme.backgroundImageUrl}
           alt={currentTheme.aiHint || "Weather background image"}
-          layout="fill"
-          objectFit="cover"
+          fill // Changed from layout="fill"
+          style={{objectFit: "cover"}} // Changed from objectFit="cover"
           quality={85}
           className="opacity-30 dark:opacity-20 transition-opacity duration-1000 z-0"
           data-ai-hint={currentTheme.aiHint}
@@ -168,7 +186,7 @@ export default function WeatherPage() {
         />
       )}
       <div className="relative z-10 container mx-auto px-4 py-6 sm:px-6 sm:py-8">
-        {isLoading && !weatherData && ( // Show main skeleton only on initial load
+        {isLoading && !weatherData && (
           <>
             <Skeleton className="h-12 w-3/4 mb-6 md:mb-8" />
             <Skeleton className="h-48 w-full mb-6 md:mb-8" />
@@ -196,7 +214,7 @@ export default function WeatherPage() {
               onNextDay={handleNextDay}
               currentTime={currentTime}
               displayDate={weatherData.displayDate}
-              isDateDisabled={isDateDisabled}
+              isDateDisabled={isDateDisabledCallback}
             />
             <CurrentWeather 
               currentWeather={weatherData.current} 
@@ -222,3 +240,4 @@ export default function WeatherPage() {
     </div>
   );
 }
+
