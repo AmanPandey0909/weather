@@ -195,8 +195,8 @@ export default function WeatherPage() {
     }
   };
   
-  const handleDailyForecastSelect = (dateStr: string) => {
-    const newSelectedDate = startOfDay(parseISO(dateStr)); 
+  const handleDailyForecastSelect = (date: Date) => {
+    const newSelectedDate = startOfDay(date); 
     if (!isDateDisabledCallback(newSelectedDate)) {
         setSelectedDate(newSelectedDate);
     } else {
@@ -281,5 +281,7 @@ export default function WeatherPage() {
     </div>
   );
 }
+
+    
 
     
