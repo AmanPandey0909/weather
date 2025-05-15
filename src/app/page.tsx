@@ -4,7 +4,8 @@
 
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import type { GetWeatherForecastOutput } from '@/ai/schemas/weather-forecast-schemas';
+import type { GetWeatherForecastOutput, GetWeatherForecastInput } from '@/ai/schemas/weather-forecast-schemas';
+import { getWeatherForecast } from '@/ai/flows/get-weather-forecast-flow';
 import { WeatherHeader } from '@/components/weather/weather-header';
 import { CurrentWeather } from '@/components/weather/current-weather';
 import { HourlyForecast } from '@/components/weather/hourly-forecast';
@@ -37,18 +38,11 @@ export default function WeatherPage() {
     setError(null);
     try {
       const formattedDate = format(date, 'yyyy-MM-dd');
-      const response = await fetch(`/api/weather?location=${encodeURIComponent(loc)}&date=${formattedDate}`);
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `API request failed with status ${response.status}. Please check if the backend service is running and accessible.` }));
-        throw new Error(errorData.message || `API request failed with status ${response.status}. Ensure the backend service (ASP.NET) is operational and the API URL is correctly configured.`);
-      }
-      
-      const data: GetWeatherForecastOutput = await response.json();
+      // Call Genkit flow directly
+      const input: GetWeatherForecastInput = { location: loc, date: formattedDate };
+      const data: GetWeatherForecastOutput = await getWeatherForecast(input);
 
-      // Ensure daily forecast dates are parsed correctly into Date objects for the state if needed elsewhere,
-      // or handle directly in components. For selectedDate logic, it's already a Date.
-      // If `data.daily` contains date strings, components like DailyForecast parse them.
       setWeatherData(data);
       setLocation(data.locationName); // Update location from API response for consistency
 
@@ -59,28 +53,35 @@ export default function WeatherPage() {
 
     } catch (e: any) {
       console.error("Fetch weather data error:", e);
-      let errorMessage = "Failed to load weather data.";
-      if (e instanceof Error) {
+      let errorMessage = "Failed to load weather data using the AI service.";
+      
+      if (e.name === 'GenkitError' && e.status === 'UNAVAILABLE') {
+        errorMessage = "The AI weather service is currently unavailable. Please try again later.";
+      } else if (e.name === 'GenkitError' && e.status === 'INVALID_ARGUMENT') {
+        errorMessage = `There was an issue with the request to the AI service: ${e.message}. Please check the location or date.`;
+      } else if (e instanceof Error) {
         const lowerErrorMessage = e.message.toLowerCase();
-        if (lowerErrorMessage.includes("api key not valid") || lowerErrorMessage.includes("gemini_api_key")) {
-          errorMessage = "API Key is invalid or missing. Please check your .env configuration.";
-        } else if (lowerErrorMessage.includes("failed_precondition") && lowerErrorMessage.includes("api key")) {
-           errorMessage = "Genkit API Key precondition failed. Ensure GOOGLE_API_KEY or GEMINI_API_KEY is correctly set in your environment variables.";
-        } else if (lowerErrorMessage.includes("fetch failed")) {
-           errorMessage = "The weather data service is currently unreachable. This could be due to the backend service (ASP.NET) not running, an incorrect API URL configuration (ASPNET_API_BASE_URL in .env), or a network issue between this application and the backend. Please verify the backend service status and configuration.";
+        if (lowerErrorMessage.includes("api key not valid") || lowerErrorMessage.includes("gemini_api_key") || lowerErrorMessage.includes("google_api_key")) {
+          errorMessage = "API Key for the AI service is invalid or missing. Please check your .env configuration for GOOGLE_API_KEY or GEMINI_API_KEY.";
+        } else if (lowerErrorMessage.includes("failed_precondition") && (lowerErrorMessage.includes("api key") || lowerErrorMessage.includes("enable the api"))) {
+          errorMessage = "AI Service API Key precondition failed. Ensure GOOGLE_API_KEY (or GEMINI_API_KEY) is correctly set and the Generative Language API is enabled in your Google Cloud project.";
         } else if (lowerErrorMessage.includes("llm did not return an output")) {
-            errorMessage = "The AI model did not return a valid weather forecast. This might be a temporary issue with the AI service or the input parameters. Please try again later or with a different location/date.";
-        } else if (e.message.includes("Backend API URL is not configured")) {
-            errorMessage = "The backend weather API (ASP.NET) is not configured. Please set the ASPNET_API_BASE_URL environment variable in your .env file.";
-        }
-         else {
+          errorMessage = "The AI model did not return a valid weather forecast. This might be a temporary issue with the AI service or the input parameters.";
+        } else if (lowerErrorMessage.includes("model not found") || (e.status && e.status.toString().startsWith('NOT_FOUND'))){
+            errorMessage = "The specified AI model for weather forecast is not found or not accessible. Please check the Genkit configuration."
+        } else if (e.message) { 
           errorMessage = e.message;
         }
       }
+      
+      if (e.message && (e.message.toLowerCase().includes('quota exceeded') || e.message.toLowerCase().includes('resource has been exhausted'))) {
+        errorMessage = "The AI service quota has been exceeded. Please check your usage limits or try again later.";
+      }
+
       setError(errorMessage);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Error Fetching Weather",
         description: errorMessage,
       });
       const defaultThemeStyle = getThemeForWeather('default');
@@ -125,9 +126,8 @@ export default function WeatherPage() {
 
   const isDateDisabledCallback = useCallback((date: Date): boolean => {
     const today = startOfDay(new Date());
-    // Ensure comparison is with start of day for min/max to avoid time-of-day issues
     const minDate = startOfDay(subDays(today, MAX_PAST_DAYS));
-    const maxDate = endOfDay(addDays(today, MAX_FUTURE_DAYS)); // Use end of day for max to include the full last day
+    const maxDate = endOfDay(addDays(today, MAX_FUTURE_DAYS)); 
     return !isWithinInterval(startOfDay(date), { start: minDate, end: maxDate });
   }, []);
 
@@ -158,8 +158,7 @@ export default function WeatherPage() {
   };
   
   const handleDailyForecastSelect = (dateStr: string) => {
-    // Assuming dateStr is 'YYYY-MM-DD' from daily forecast data
-    const newSelectedDate = startOfDay(parseISO(dateStr)); // Use parseISO for YYYY-MM-DD
+    const newSelectedDate = startOfDay(parseISO(dateStr)); 
     if (!isDateDisabledCallback(newSelectedDate)) {
         setSelectedDate(newSelectedDate);
     } else {
@@ -177,8 +176,8 @@ export default function WeatherPage() {
         <Image
           src={currentTheme.backgroundImageUrl}
           alt={currentTheme.aiHint || "Weather background image"}
-          fill // Changed from layout="fill"
-          style={{objectFit: "cover"}} // Changed from objectFit="cover"
+          fill
+          style={{objectFit: "cover"}}
           quality={85}
           className="opacity-30 dark:opacity-20 transition-opacity duration-1000 z-0"
           data-ai-hint={currentTheme.aiHint}
