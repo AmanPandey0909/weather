@@ -12,7 +12,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from 'date-fns';
 
 interface WeatherHeaderProps {
-  currentLocation: string;
+  locationNameToDisplay: string; // For the main title display (e.g., "New York City, NY")
+  currentSearchQuery: string;    // For the input field (e.g., "nyc")
   onSearchLocation: (location: string) => void;
   selectedDate: Date;
   onDateChange: (date: Date) => void;
@@ -24,7 +25,8 @@ interface WeatherHeaderProps {
 }
 
 export function WeatherHeader({ 
-  currentLocation, 
+  locationNameToDisplay,
+  currentSearchQuery,
   onSearchLocation, 
   selectedDate, 
   onDateChange,
@@ -34,25 +36,27 @@ export function WeatherHeader({
   displayDate,
   isDateDisabled
 }: WeatherHeaderProps) {
-  const [searchInput, setSearchInput] = useState(currentLocation);
-
-  const handleSearch = (e?: React.FormEvent<HTMLFormElement>) => {
-    e?.preventDefault();
-    if (searchInput.trim()) {
-      onSearchLocation(searchInput.trim());
-    }
-  };
+  const [inputFieldText, setInputFieldText] = useState(currentSearchQuery);
 
   useEffect(() => {
-    setSearchInput(currentLocation);
-  }, [currentLocation]);
+    // Sync input field if the currentSearchQuery prop changes from parent
+    // (e.g. on initial load or if parent logic were to change it)
+    setInputFieldText(currentSearchQuery);
+  }, [currentSearchQuery]);
+
+  const handleSearchSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
+    if (inputFieldText.trim()) {
+      onSearchLocation(inputFieldText.trim());
+    }
+  };
 
   return (
     <div className="flex flex-col md:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
       <div className="flex flex-col items-center md:items-start">
         <div className="flex items-center text-xl sm:text-2xl font-semibold text-foreground mb-1">
           <MapPin className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary" />
-          <span>{currentLocation}</span>
+          <span>{locationNameToDisplay}</span>
         </div>
         <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
           <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 text-primary/80" />
@@ -61,12 +65,12 @@ export function WeatherHeader({
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full md:w-auto">
-        <form onSubmit={handleSearch} className="relative w-full sm:w-auto md:w-56">
+        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-auto md:w-56">
           <Input
             type="text"
             placeholder="Search City or ZIP"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            value={inputFieldText}
+            onChange={(e) => setInputFieldText(e.target.value)}
             className="bg-input/70 border-border/70 placeholder-muted-foreground text-sm pr-10 backdrop-blur-sm"
             aria-label="Search City or ZIP Code"
           />

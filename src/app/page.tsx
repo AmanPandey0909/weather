@@ -27,24 +27,23 @@ export default function WeatherPage() {
   const [weatherData, setWeatherData] = useState<GetWeatherForecastOutput | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [location, setLocation] = useState('New York'); // Default location
+  const [searchQuery, setSearchQuery] = useState('New York'); // User's input for search
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentTime, setCurrentTime] = useState('');
   const [currentTheme, setCurrentTheme] = useState<WeatherStyle | null>(null);
   const { toast } = useToast();
 
-  const fetchWeatherData = useCallback(async (loc: string, date: Date) => {
+  const fetchWeatherData = useCallback(async (query: string, date: Date) => {
     setIsLoading(true);
     setError(null);
     try {
       const formattedDate = format(date, 'yyyy-MM-dd');
       
-      // Call Genkit flow directly
-      const input: GetWeatherForecastInput = { location: loc, date: formattedDate };
+      const input: GetWeatherForecastInput = { location: query, date: formattedDate };
       const data: GetWeatherForecastOutput = await getWeatherForecast(input);
 
       setWeatherData(data);
-      setLocation(data.locationName); // Update location from API response for consistency
+      // searchQuery remains what the user typed. data.locationName is used for display.
 
       const theme = getThemeForWeather(data.current.condition.text);
       setCurrentTheme(theme);
@@ -84,6 +83,8 @@ export default function WeatherPage() {
         title: "Error Fetching Weather",
         description: errorMessage,
       });
+      // Fallback to default theme on error
+      setWeatherData(null); // Clear any potentially stale data
       const defaultThemeStyle = getThemeForWeather('default');
       setCurrentTheme(defaultThemeStyle);
       updateRootCSSVariables(defaultThemeStyle.theme);
@@ -94,8 +95,8 @@ export default function WeatherPage() {
   }, [toast]);
 
   useEffect(() => {
-    fetchWeatherData(location, selectedDate);
-  }, [fetchWeatherData, location, selectedDate]);
+    fetchWeatherData(searchQuery, selectedDate);
+  }, [fetchWeatherData, searchQuery, selectedDate]);
 
 
   useEffect(() => {
@@ -106,22 +107,26 @@ export default function WeatherPage() {
   }, []);
   
   useEffect(() => {
-    if (!currentTheme && weatherData?.current?.condition?.text) {
-      const initialTheme = getThemeForWeather(weatherData.current.condition.text);
-      setCurrentTheme(initialTheme);
-      updateRootCSSVariables(initialTheme.theme);
-      document.documentElement.className = initialTheme.mode;
-    } else if (!currentTheme) {
+    if (weatherData?.current?.condition?.text) {
+      const newTheme = getThemeForWeather(weatherData.current.condition.text);
+      if (currentTheme?.name !== newTheme.name) { // Only update if theme actually changes
+        setCurrentTheme(newTheme);
+        updateRootCSSVariables(newTheme.theme);
+        document.documentElement.className = newTheme.mode;
+      }
+    } else if (!weatherData && !isLoading) { // If no data and not loading (e.g. error state)
       const defaultThemeStyle = getThemeForWeather('default');
-      setCurrentTheme(defaultThemeStyle);
-      updateRootCSSVariables(defaultThemeStyle.theme);
-      document.documentElement.className = defaultThemeStyle.mode;
+      if (currentTheme?.name !== defaultThemeStyle.name) {
+        setCurrentTheme(defaultThemeStyle);
+        updateRootCSSVariables(defaultThemeStyle.theme);
+        document.documentElement.className = defaultThemeStyle.mode;
+      }
     }
-  }, [weatherData, currentTheme]);
+  }, [weatherData, isLoading, currentTheme]);
 
 
-  const handleSearchLocation = (newLocation: string) => {
-    setLocation(newLocation);
+  const handleSearchLocation = (newQuery: string) => {
+    setSearchQuery(newQuery);
   };
 
   const isDateDisabledCallback = useCallback((date: Date): boolean => {
@@ -170,6 +175,8 @@ export default function WeatherPage() {
     }
   };
 
+  const displayedLocationName = weatherData?.locationName || searchQuery;
+
   return (
     <div className="relative min-h-screen transition-colors duration-500">
       {currentTheme && currentTheme.backgroundImageUrl && (
@@ -201,20 +208,23 @@ export default function WeatherPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+        
+        {/* Render header even if weatherData is null initially or after an error, to allow new searches */}
+        <WeatherHeader
+          locationNameToDisplay={displayedLocationName}
+          currentSearchQuery={searchQuery}
+          onSearchLocation={handleSearchLocation}
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          onPreviousDay={handlePreviousDay}
+          onNextDay={handleNextDay}
+          currentTime={currentTime}
+          displayDate={weatherData?.displayDate || format(selectedDate, "EEEE, MMMM d")}
+          isDateDisabled={isDateDisabledCallback}
+        />
 
-        {weatherData && (
+        {weatherData && !isLoading && (
           <>
-            <WeatherHeader
-              currentLocation={weatherData.locationName}
-              onSearchLocation={handleSearchLocation}
-              selectedDate={selectedDate}
-              onDateChange={handleDateChange}
-              onPreviousDay={handlePreviousDay}
-              onNextDay={handleNextDay}
-              currentTime={currentTime}
-              displayDate={weatherData.displayDate}
-              isDateDisabled={isDateDisabledCallback}
-            />
             <CurrentWeather 
               currentWeather={weatherData.current} 
               locationName={weatherData.locationName} 
@@ -239,4 +249,3 @@ export default function WeatherPage() {
     </div>
   );
 }
-
