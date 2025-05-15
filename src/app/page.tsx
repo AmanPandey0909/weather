@@ -3,7 +3,8 @@
 "use client";
 
 import * as React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback }
+from 'react';
 import type { GetWeatherForecastOutput, GetWeatherForecastInput } from '@/ai/schemas/weather-forecast-schemas';
 import { getWeatherForecast } from '@/ai/flows/get-weather-forecast-flow';
 import { WeatherHeader } from '@/components/weather/weather-header';
@@ -27,11 +28,43 @@ export default function WeatherPage() {
   const [weatherData, setWeatherData] = useState<GetWeatherForecastOutput | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('New York'); // User's input for search
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [searchQuery, setSearchQuery] = useState('New York'); // User's input for search, defaults to New York
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [currentTime, setCurrentTime] = useState('');
   const [currentTheme, setCurrentTheme] = useState<WeatherStyle | null>(null);
   const { toast } = useToast();
+
+  // Effect for fetching live location on initial load
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setSearchQuery(`${latitude},${longitude}`);
+          toast({
+            title: "Live Location Fetched",
+            description: "Showing weather for your current location.",
+          });
+        },
+        (err) => {
+          console.warn("Geolocation error:", err.message);
+          toast({
+            variant: "default",
+            title: "Live Location Error",
+            description: "Could not get current location. Showing default.",
+          });
+          // searchQuery remains 'New York' (or its last value if already changed by user before geo attempt finishes)
+        }
+      );
+    } else {
+      toast({
+        variant: "default",
+        title: "Geolocation Not Supported",
+        description: "Showing weather for default location.",
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]); // Only run on mount, toast is stable
 
   const fetchWeatherData = useCallback(async (query: string, date: Date) => {
     setIsLoading(true);
@@ -43,7 +76,6 @@ export default function WeatherPage() {
       const data: GetWeatherForecastOutput = await getWeatherForecast(input);
 
       setWeatherData(data);
-      // searchQuery remains what the user typed. data.locationName is used for display.
 
       const theme = getThemeForWeather(data.current.condition.text);
       setCurrentTheme(theme);
@@ -83,8 +115,7 @@ export default function WeatherPage() {
         title: "Error Fetching Weather",
         description: errorMessage,
       });
-      // Fallback to default theme on error
-      setWeatherData(null); // Clear any potentially stale data
+      setWeatherData(null); 
       const defaultThemeStyle = getThemeForWeather('default');
       setCurrentTheme(defaultThemeStyle);
       updateRootCSSVariables(defaultThemeStyle.theme);
@@ -95,7 +126,9 @@ export default function WeatherPage() {
   }, [toast]);
 
   useEffect(() => {
-    fetchWeatherData(searchQuery, selectedDate);
+    if (searchQuery) { // Only fetch if searchQuery is set
+      fetchWeatherData(searchQuery, selectedDate);
+    }
   }, [fetchWeatherData, searchQuery, selectedDate]);
 
 
@@ -109,12 +142,12 @@ export default function WeatherPage() {
   useEffect(() => {
     if (weatherData?.current?.condition?.text) {
       const newTheme = getThemeForWeather(weatherData.current.condition.text);
-      if (currentTheme?.name !== newTheme.name) { // Only update if theme actually changes
+      if (currentTheme?.name !== newTheme.name) { 
         setCurrentTheme(newTheme);
         updateRootCSSVariables(newTheme.theme);
         document.documentElement.className = newTheme.mode;
       }
-    } else if (!weatherData && !isLoading) { // If no data and not loading (e.g. error state)
+    } else if (!weatherData && !isLoading) { 
       const defaultThemeStyle = getThemeForWeather('default');
       if (currentTheme?.name !== defaultThemeStyle.name) {
         setCurrentTheme(defaultThemeStyle);
@@ -175,7 +208,7 @@ export default function WeatherPage() {
     }
   };
 
-  const displayedLocationName = weatherData?.locationName || searchQuery;
+  const displayedLocationName = weatherData?.locationName || (searchQuery.includes(',') ? "Current Location" : searchQuery);
 
   return (
     <div className="relative min-h-screen transition-colors duration-500">
@@ -192,7 +225,7 @@ export default function WeatherPage() {
         />
       )}
       <div className="relative z-10 container mx-auto px-4 py-6 sm:px-6 sm:py-8">
-        {isLoading && !weatherData && (
+        {(isLoading && !weatherData) && ( // Show skeleton only if loading and no data yet
           <>
             <Skeleton className="h-12 w-3/4 mb-6 md:mb-8" />
             <Skeleton className="h-48 w-full mb-6 md:mb-8" />
@@ -209,10 +242,9 @@ export default function WeatherPage() {
           </Alert>
         )}
         
-        {/* Render header even if weatherData is null initially or after an error, to allow new searches */}
         <WeatherHeader
           locationNameToDisplay={displayedLocationName}
-          currentSearchQuery={searchQuery}
+          currentSearchQuery={searchQuery.includes(',') ? "" : searchQuery} // Show empty in input if it's lat,lon
           onSearchLocation={handleSearchLocation}
           selectedDate={selectedDate}
           onDateChange={handleDateChange}
@@ -249,3 +281,5 @@ export default function WeatherPage() {
     </div>
   );
 }
+
+    
